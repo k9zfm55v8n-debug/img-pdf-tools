@@ -163,8 +163,8 @@
       <button class="btn ok" style="width:100%" onclick="exportImage()">⬇ 导出 / 保存图片</button>
 
       <h3>OCR 文字识别</h3>
-      <div class="hint">识别图片中的文字（中文+英文），生成可编辑的 Word 文档(.docx)。识别引擎在本地运行，图片不会上传。</div>
-      <button class="btn primary" style="width:100%" onclick="ocrToWord()">🔤 识别文字并导出 Word</button>
+      <div class="hint">识别图片中的文字（中文+英文），直接导出为纯文本文件(.txt)，<b>不生成任何压缩文件</b>，可用任意文本编辑器或 Word 打开编辑。识别引擎在本地运行，图片不会上传。</div>
+      <button class="btn primary" style="width:100%" onclick="ocrToWord()">🔤 识别文字并导出文本(.txt)</button>
       <div class="hint" id="ocrStatus"></div>
     </div>
   </section>
@@ -293,7 +293,6 @@
 <script src="lib/pdf-lib.min.js"></script>
 <script src="lib/pdf.min.js"></script>
 <script src="vendor/tesseract.min.js"></script>
-<script src="vendor/jszip.min.js"></script>
 <script>
 /* ================= 通用 ================= */
 function switchTab(t){
@@ -466,12 +465,11 @@ function exportImage(){
   ex.toBlob(b=>{ if(b) download(b,name); else alert('该格式不被支持'); }, mime, q);
 }
 
-/* ============ OCR 识别并导出 Word ============ */
+/* ============ OCR 识别并导出纯文本（不压缩） ============ */
 async function ocrToWord(){
   if(!base.width){ alert('请先选择图片'); return; }
   const st=document.getElementById('ocrStatus');
   if(typeof Tesseract==='undefined'){ st.textContent='OCR 引擎未加载：请确认 vendor/tesseract.min.js 存在。'; return; }
-  if(typeof JSZip==='undefined'){ st.textContent='JSZip 未加载：请确认 vendor/jszip.min.js 存在。'; return; }
   st.textContent='正在加载识别引擎（首次需下载中文语言包，约 20MB，请稍候）…';
   try{
     const result=await Tesseract.recognize(base, 'chi_sim', {
@@ -481,37 +479,15 @@ async function ocrToWord(){
       logger: m=>{ if(m.status==='recognizing text'){ st.textContent='识别中… '+(m.progress*100).toFixed(0)+'%'; } }
     });
     const text=result.data.text || '';
-    st.textContent='识别完成，正在生成 Word 文档…';
-    const blob=await buildDocx(text);
-    download(blob, 'ocr-result.docx');
+    st.textContent='识别完成，正在导出纯文本…';
+    // 直接导出为纯文本 .txt，不打包、不压缩
+    download(new Blob([text], {type:'text/plain;charset=utf-8'}), 'ocr-result.txt');
     const n=(text.trim().match(/\S/g)||[]).length;
-    st.textContent='已导出 ocr-result.docx（识别到 '+n+' 个字符）。';
+    st.textContent='已导出 ocr-result.txt（识别到 '+n+' 个字符，纯文本、无压缩，可用 Word 直接打开）。';
   }catch(err){
     console.error(err);
     st.textContent='OCR 失败：'+err.message;
   }
-}
-function buildDocx(text){
-  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const paras=text.split(/\r?\n/).map(p=>'<w:p><w:r><w:t xml:space="preserve">'+esc(p)+'</w:t></w:r></w:p>').join('');
-  const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
-    +paras+'<w:sectPr/></w:body></w:document>';
-  const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-    +'<Default Extension="xml" ContentType="application/xml"/>'
-    +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
-    +'</Types>';
-  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
-    +'</Relationships>';
-  const zip=new JSZip();
-  zip.file('[Content_Types].xml', contentTypes);
-  zip.file('_rels/.rels', rels);
-  zip.file('word/document.xml', documentXml);
-  return zip.generateAsync({type:'blob'});
 }
 
 window.addEventListener('resize', ()=>{ if(img) layoutStage(); });
