@@ -51,7 +51,7 @@
   .txt.sel{border-color:#fff;}
   #crop{position:absolute; z-index:4; border:2px solid #fff; box-shadow:0 0 0 9999px rgba(0,0,0,.45); display:none;}
   #crop .h{position:absolute; right:-14px; bottom:-14px; width:28px; height:28px; background:#fff; border-radius:50%;}
-  #replRect{position:absolute; z-index:4; border:2px dashed #4f8cff; background:rgba(79,140,255,.12); display:none;}
+  #replRect{position:absolute; z-index:4; border:2px dashed #4f8cff; background:rgba(79,140,255,.12); display:none; pointer-events:none;}
   .gallery{display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;}
   .gallery img{width:96px; height:128px; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#000;}
   .sigwrap{background:#fff; border-radius:10px; touch-action:none;}
@@ -129,8 +129,8 @@
 
       <div id="replBox" style="display:none">
         <h3>改写图片中的文字</h3>
-        <div class="hint">在图上框选要替换的文字区域，再写入新文字（保留原图清晰度，导出为原分辨率）。</div>
-        <input type="text" id="replText" placeholder="替换后的文字">
+        <div class="hint">用法：① 在图上<b>拖动框选</b>要替换的文字区域 → ② 在下方<b>输入框里填新文字</b> → ③ 点「应用改写」。注意：图上的方框只是<b>选区</b>，文字请填在下方的输入框，不要直接在方框里打字。</div>
+        <input type="text" id="replText" placeholder="在这里输入替换后的文字">
         <div class="row">
           <span class="badge">字号(px)</span><input class="slider" style="width:120px" type="range" min="8" max="200" step="1" value="36" id="replSize">
         </div>
@@ -701,7 +701,7 @@ function toggleReplace(){
 }
 function selStart(x,y){ replDrag={sx:x,sy:y}; replRect.style.left=x+'px'; replRect.style.top=y+'px'; replRect.style.width='0px'; replRect.style.height='0px'; }
 function selMove(x,y){ if(!replDrag) return; const a=Math.min(replDrag.sx,x), b=Math.min(replDrag.sy,y); const w=Math.abs(x-replDrag.sx), h=Math.abs(y-replDrag.sy); replRect.style.left=a+'px'; replRect.style.top=b+'px'; replRect.style.width=w+'px'; replRect.style.height=h+'px'; }
-function selEnd(){ if(replaceMode&&replDrag){ const h=parseFloat(replRect.style.height), w=parseFloat(replRect.style.width); if(h>2&&w>2) document.getElementById('replSize').value=Math.round((h/stageH)*base.height*0.7); replDrag=null; } }
+function selEnd(){ if(replaceMode&&replDrag){ const h=parseFloat(replRect.style.height), w=parseFloat(replRect.style.width); if(h>2&&w>2){ document.getElementById('replSize').value=Math.round((h/stageH)*base.height*0.7); const i=document.getElementById('replText'); if(i){ i.focus(); try{i.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){} } } replDrag=null; } }
 stage.addEventListener('pointerdown', e=>{ if(!replaceMode) return; const r=stage.getBoundingClientRect(); selStart(e.clientX-r.left, e.clientY-r.top); });
 stage.addEventListener('pointermove', e=>{ if(!replaceMode||!replDrag) return; const r=stage.getBoundingClientRect(); selMove(e.clientX-r.left, e.clientY-r.top); });
 stage.addEventListener('pointerup', selEnd);
